@@ -1,0 +1,249 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&family=Rajdhani:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── CSS Custom Properties / Design Tokens ─── */
+:root {
+  /* Dynamic neon color — changed by ThemeProvider */
+  --neon-color: #a855f7;
+  --neon-color-rgb: 168, 85, 247;
+  --neon-glow: 0 0 8px var(--neon-color), 0 0 24px rgba(var(--neon-color-rgb), 0.4);
+  --neon-glow-lg: 0 0 16px var(--neon-color), 0 0 48px rgba(var(--neon-color-rgb), 0.5), 0 0 80px rgba(var(--neon-color-rgb), 0.2);
+
+  /* Glass system */
+  --glass-bg: rgba(255, 255, 255, 0.04);
+  --glass-bg-hover: rgba(255, 255, 255, 0.07);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-border-active: rgba(var(--neon-color-rgb), 0.5);
+
+  /* Background layers */
+  --bg-primary: #05050a;
+  --bg-secondary: #0a0a14;
+  --bg-tertiary: #0f0f1e;
+
+  /* Text */
+  --text-primary: rgba(255, 255, 255, 0.95);
+  --text-secondary: rgba(255, 255, 255, 0.55);
+  --text-muted: rgba(255, 255, 255, 0.3);
+
+  /* Nav height */
+  --nav-height: 80px;
+}
+
+:root {
+  /* Nav icon colors (dark default) */
+  --nav-icon-inactive: rgba(255, 255, 255, 0.4);
+  --nav-label-inactive: rgba(255, 255, 255, 0.35);
+  --glass-strong-bg: rgba(255, 255, 255, 0.06);
+  --glass-strong-border: rgba(255, 255, 255, 0.12);
+}
+
+[data-theme='light'] {
+  /* Glass system */
+  --glass-bg: rgba(255, 255, 255, 0.65);
+  --glass-bg-hover: rgba(255, 255, 255, 0.82);
+  --glass-border: rgba(0, 0, 0, 0.09);
+  --glass-border-active: rgba(var(--neon-color-rgb), 0.5);
+
+  /* Background layers */
+  --bg-primary: #eef0f8;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #e0e3f0;
+
+  /* Text */
+  --text-primary: rgba(15, 15, 40, 0.92);
+  --text-secondary: rgba(15, 15, 40, 0.58);
+  --text-muted: rgba(15, 15, 40, 0.38);
+
+  /* Nav icon colors (light mode) */
+  --nav-icon-inactive: rgba(15, 15, 40, 0.45);
+  --nav-label-inactive: rgba(15, 15, 40, 0.40);
+  --glass-strong-bg: rgba(255, 255, 255, 0.75);
+  --glass-strong-border: rgba(0, 0, 0, 0.10);
+}
+
+/* ─── Base Reset ─── */
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Mobile-first: constrain content width */
+body {
+  min-height: 100dvh;
+  min-height: 100vh;
+}
+
+/* ─── Scrollbar Styling ─── */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(var(--neon-color-rgb), 0.4);
+  border-radius: 4px;
+}
+
+/* ─── Glass Utilities ─── */
+@layer utilities {
+  .glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+  }
+
+  .glass-hover {
+    transition: background 0.2s ease, border-color 0.2s ease;
+  }
+
+  .glass-hover:hover {
+    background: var(--glass-bg-hover);
+    border-color: rgba(var(--neon-color-rgb), 0.25);
+  }
+
+  .glass-strong {
+    background: var(--glass-strong-bg);
+    backdrop-filter: blur(32px);
+    -webkit-backdrop-filter: blur(32px);
+    border: 1px solid var(--glass-strong-border);
+  }
+
+  .neon-text {
+    color: var(--neon-color);
+    text-shadow: 0 0 10px rgba(var(--neon-color-rgb), 0.8);
+  }
+
+  .neon-border {
+    border-color: var(--neon-color) !important;
+    box-shadow: var(--neon-glow);
+  }
+
+  .neon-bg {
+    background-color: var(--neon-color);
+    box-shadow: var(--neon-glow);
+  }
+
+  .neon-glow {
+    box-shadow: var(--neon-glow);
+  }
+
+  .neon-glow-lg {
+    box-shadow: var(--neon-glow-lg);
+  }
+
+  .font-orbitron {
+    font-family: 'Orbitron', monospace;
+  }
+
+  .font-rajdhani {
+    font-family: 'Rajdhani', sans-serif;
+  }
+}
+
+/* ─── Space background with subtle noise ─── */
+.space-bg {
+  background: 
+    radial-gradient(ellipse at 20% 20%, rgba(var(--neon-color-rgb), 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(var(--neon-color-rgb), 0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(30, 10, 60, 0.8) 0%, transparent 80%),
+    var(--bg-primary);
+  transition: background 0.6s ease;
+}
+
+[data-theme='light'] .space-bg {
+  background: 
+    radial-gradient(ellipse at 15% 10%, rgba(var(--neon-color-rgb), 0.18) 0%, transparent 45%),
+    radial-gradient(ellipse at 85% 85%, rgba(var(--neon-color-rgb), 0.12) 0%, transparent 45%),
+    radial-gradient(ellipse at 50% 50%, rgba(220, 225, 245, 0.9) 0%, transparent 70%),
+    var(--bg-primary);
+}
+
+[data-theme='light'] .grid-bg {
+  background-image: 
+    linear-gradient(rgba(var(--neon-color-rgb), 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--neon-color-rgb), 0.06) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* ─── Animated grid lines background ─── */
+.grid-bg {
+  background-image: 
+    linear-gradient(rgba(var(--neon-color-rgb), 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--neon-color-rgb), 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* ─── Page container (mobile-first, max-width centered) ─── */
+.page-container {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  min-height: 100vh;
+  padding-bottom: calc(var(--nav-height) + 16px);
+  position: relative;
+}
+
+/* ─── Shimmer loading effect ─── */
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.03) 25%,
+    rgba(var(--neon-color-rgb), 0.08) 50%,
+    rgba(255,255,255,0.03) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s linear infinite;
+}
+
+/* ─── Status dot ─── */
+.status-online {
+  background: #22c55e;
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.8);
+}
+.status-away {
+  background: #f59e0b;
+  box-shadow: 0 0 6px rgba(245, 158, 11, 0.8);
+}
+.status-offline {
+  background: rgba(255,255,255,0.3);
+}
+
+/* ─── Game badge color variants ─── */
+.badge-valorant   { background: rgba(255, 70, 85, 0.15); border-color: rgba(255, 70, 85, 0.4); color: #ff6b7a; }
+.badge-stardew    { background: rgba(134, 213, 92, 0.12); border-color: rgba(134, 213, 92, 0.35); color: #a3e635; }
+.badge-detroit    { background: rgba(59, 130, 246, 0.12); border-color: rgba(59, 130, 246, 0.35); color: #60a5fa; }
+.badge-default    { background: rgba(var(--neon-color-rgb), 0.12); border-color: rgba(var(--neon-color-rgb), 0.35); color: var(--neon-color); }
+
+/* ─── Clip thumbnail overlay ─── */
+.clip-overlay {
+  background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 60%);
+}
+
+/* ─── Transition for theme color changes ─── */
+*, *::before, *::after {
+  transition-property: box-shadow, border-color, color, background-color, text-shadow;
+  transition-duration: 0.4s;
+  transition-timing-function: ease;
+}
+
+/* Override transition for interactive elements */
+button, a, input, select, textarea {
+  transition-duration: 0.15s;
+}
