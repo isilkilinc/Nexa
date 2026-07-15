@@ -72,7 +72,6 @@ export function NexaLogo({
         filter: isDark && glow ? 'drop-shadow(0 0 8px currentColor)' : 'none',
         ...style
       }}
-      draggable={false}
     >
       <title>{alt}</title>
       
