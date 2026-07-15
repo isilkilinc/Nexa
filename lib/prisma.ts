@@ -9,9 +9,10 @@ const globalForPrisma = globalThis as unknown as {
 
 function createPrismaClient() {
   // PrismaPg requires a pg.Pool instance (not a plain config object).
-  // SSL must be set explicitly for Supabase connections.
+  // Use DATABASE_URL (PgBouncer pooled) for runtime queries.
+  // DIRECT_URL (port 5432) is only for Prisma CLI migrations.
   const pool = new Pool({
-    connectionString: process.env.DIRECT_URL,
+    connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false },
     max: 10,
     idleTimeoutMillis: 30_000,

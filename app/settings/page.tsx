@@ -19,6 +19,14 @@ export default function SettingsPage() {
 
   const handleLogoToggle = (style: LogoStyle) => setLogoStyle(style);
 
+  const handleColorModeChange = (mode: 'light' | 'dark') => {
+    if (mode === 'light' && activePreset.id === 'white') {
+      const defaultPreset = NEON_PRESETS.find(p => p.id === 'purple') || NEON_PRESETS[0];
+      setNeonPreset(defaultPreset);
+    }
+    setColorMode(mode);
+  };
+
   const settingsSections = [
     {
       title: t('settings_account'),
@@ -134,14 +142,16 @@ export default function SettingsPage() {
                 <p className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>{activePreset.name}</p>
                 <p className="text-xs font-rajdhani" style={{ color: 'var(--text-secondary)' }}>{neonColor.toUpperCase()}</p>
               </div>
-              <div className="ml-auto">
-                <NexaLogo size="sm" />
+              <div className="ml-auto drop-shadow-none">
+                <NexaLogo hideText={true} className="w-16 h-16 text-[color:var(--neon-color)]" style={{ color: 'var(--neon-color)' }} />
               </div>
             </div>
 
             {/* Preset palette grid */}
-            <div className="grid grid-cols-5 gap-2 mb-4">
-              {NEON_PRESETS.map((preset: NeonPreset) => {
+            {(() => {
+              const visibleColors = NEON_PRESETS.filter(p => !(colorMode === 'light' && p.id === 'white'));
+
+              const renderPreset = (preset: NeonPreset) => {
                 const isActive = activePreset.id === preset.id;
                 return (
                   <motion.button
@@ -150,11 +160,11 @@ export default function SettingsPage() {
                     onClick={() => setNeonPreset(preset)}
                     whileTap={{ scale: 0.88 }}
                     whileHover={{ scale: 1.08 }}
-                    className="flex flex-col items-center gap-1"
+                    className="flex flex-col items-center gap-1 w-12"
                     title={preset.name}
                   >
                     <div
-                      className="w-full aspect-square rounded-xl relative"
+                      className="w-full aspect-square rounded-xl relative flex-shrink-0"
                       style={{
                         background: preset.color,
                         boxShadow: isActive ? `0 0 14px ${preset.color}, 0 0 28px ${preset.color}66` : `0 0 6px ${preset.color}66`,
@@ -172,8 +182,21 @@ export default function SettingsPage() {
                     </span>
                   </motion.button>
                 );
-              })}
-            </div>
+              };
+
+              return (
+                <div className="flex flex-col gap-3 items-center w-full mb-4">
+                  <div className="flex flex-row gap-3 justify-center">
+                    {visibleColors.slice(0, 5).map(renderPreset)}
+                  </div>
+                  {visibleColors.length > 5 && (
+                    <div className="flex flex-row gap-3 justify-center">
+                      {visibleColors.slice(5).map(renderPreset)}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Custom color picker */}
             <div className="flex items-center gap-3">
@@ -220,7 +243,7 @@ export default function SettingsPage() {
             {/* Dark Mode */}
             <button
               id="color-dark"
-              onClick={() => setColorMode('dark')}
+              onClick={() => handleColorModeChange('dark')}
               className="flex-1 py-3 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 relative"
               style={{
                 background: colorMode === 'dark' ? 'rgba(var(--neon-color-rgb), 0.15)' : 'transparent',
@@ -237,7 +260,7 @@ export default function SettingsPage() {
             {/* Light Mode */}
             <button
               id="color-light"
-              onClick={() => setColorMode('light')}
+              onClick={() => handleColorModeChange('light')}
               className="flex-1 py-3 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 relative"
               style={{
                 background: colorMode === 'light' ? 'rgba(var(--neon-color-rgb), 0.15)' : 'transparent',
@@ -253,49 +276,7 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* ─── Logo Style ─── */}
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <Monitor size={14} style={{ color: 'var(--neon-color)' }} />
-            <h2 className="font-orbitron font-bold text-sm tracking-wider" style={{ color: 'var(--text-primary)' }}>
-              {t('settings_logo_style')}
-            </h2>
-          </div>
 
-          <GlassCard className="p-4">
-            <div className="grid grid-cols-2 gap-3">
-              {(['minimalist', 'cyberpunk'] as LogoStyle[]).map((style) => (
-                <motion.button
-                  key={style}
-                  id={`logo-style-${style}`}
-                  onClick={() => handleLogoToggle(style)}
-                  whileTap={{ scale: 0.96 }}
-                  className="flex flex-col items-center gap-3 rounded-2xl py-5 px-3 transition-all duration-200"
-                  style={{
-                    background: logoStyle === style ? 'rgba(var(--neon-color-rgb), 0.12)' : 'rgba(255,255,255,0.04)',
-                    border: `1px solid ${logoStyle === style ? 'var(--neon-color)' : 'var(--glass-border)'}`,
-                    boxShadow: logoStyle === style ? '0 0 16px rgba(var(--neon-color-rgb), 0.3)' : 'none',
-                  }}
-                >
-                  <NexaLogo size="sm" />
-                  <div>
-                    <p className="font-orbitron font-bold text-xs capitalize" style={{ color: logoStyle === style ? 'var(--neon-color)' : 'var(--text-secondary)' }}>
-                      {style === 'minimalist' ? t('settings_minimalist') : t('settings_cyberpunk')}
-                    </p>
-                  </div>
-                  {logoStyle === style && (
-                    <div
-                      className="w-5 h-5 rounded-full flex items-center justify-center"
-                      style={{ background: 'var(--neon-color)' }}
-                    >
-                      <CheckCircle size={12} color="#000" strokeWidth={3} />
-                    </div>
-                  )}
-                </motion.button>
-              ))}
-            </div>
-          </GlassCard>
-        </div>
 
         {/* ─── Other settings sections ─── */}
         {settingsSections.map(section => (

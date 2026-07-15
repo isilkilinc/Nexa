@@ -34,7 +34,7 @@ export default function HomePage() {
         }}
       >
         <div className="flex items-center justify-between mb-4">
-          <NexaLogo size="md" />
+          <NexaLogo size={48} className="text-[color:var(--neon-color)]" style={{ color: 'var(--neon-color)' }} />
           <motion.div
             animate={{ rotate: [0, 360] }}
             transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}

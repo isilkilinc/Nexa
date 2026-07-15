@@ -55,16 +55,23 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
 
-  session: { strategy: 'jwt' },
+  // Must use 'database' strategy when PrismaAdapter is active.
+  // Using 'jwt' with an adapter breaks OAuth providers (Google, Discord)
+  // because NextAuth can't persist the session, causing a silent redirect loop.
+  session: { strategy: 'database' },
 
   callbacks: {
-    async jwt({ token, user }) {
-      if (user) token.id = user.id;
-      return token;
+    async signIn({ account }) {
+      // Allow all OAuth sign-ins (Google, Discord, etc.)
+      if (account?.type === 'oauth') {
+        return true;
+      }
+      // For credentials, the authorize() function handles validation
+      return true;
     },
-    async session({ session, token }) {
-      if (token && session.user) {
-        (session.user as any).id = token.id as string;
+    async session({ session, user }) {
+      if (user && session.user) {
+        (session.user as any).id = user.id;
       }
       return session;
     },
