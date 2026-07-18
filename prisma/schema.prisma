@@ -49,8 +49,14 @@ model User {
   // Custom field for CredentialsProvider
   password      String?
 
-  accounts Account[]
-  sessions Session[]
+  accounts                 Account[]
+  sessions                 Session[]
+  listings                 Listing[]                 @relation("UserListings")
+  requests                 Request[]                 @relation("UserRequests")
+  receivedNotifications    Notification[]            @relation("ReceivedNotifications")
+  sentNotifications        Notification[]            @relation("SentNotifications")
+  conversationParticipants ConversationParticipant[]
+  sentMessages             Message[]                 @relation("SentMessages")
 }
 
 model VerificationToken {
@@ -60,3 +66,114 @@ model VerificationToken {
 
   @@unique([identifier, token])
 }
+
+// -------------------------------------------------------
+// Enums
+// -------------------------------------------------------
+
+enum ListingStatus {
+  OPEN
+  CLOSED
+}
+
+enum RequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+enum MessageType {
+  USER
+  SYSTEM
+}
+
+// -------------------------------------------------------
+// Core models
+// -------------------------------------------------------
+
+model Listing {
+  id          String        @id @default(cuid())
+  title       String
+  game        String
+  description String
+  status           ListingStatus @default(OPEN)
+  micRequired      Boolean       @default(false)
+  genderPreference String?
+  playtime         String?
+  experience       String?
+  is18Plus         Boolean       @default(false)
+  specificTime     String?
+  createdAt        DateTime      @default(now())
+  creatorId   String
+  creator     User          @relation("UserListings", fields: [creatorId], references: [id])
+  requests    Request[]
+}
+
+model Request {
+  id             String        @id @default(cuid())
+  status         RequestStatus @default(PENDING)
+  initialMessage String?
+  createdAt      DateTime      @default(now())
+  senderId       String
+  sender         User          @relation("UserRequests", fields: [senderId], references: [id])
+  listingId      String
+  listing        Listing       @relation(fields: [listingId], references: [id], onDelete: Cascade)
+}
+
+// -------------------------------------------------------
+// Notifications
+// -------------------------------------------------------
+
+model Notification {
+  id          String   @id @default(cuid())
+  message     String
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  recipientId String
+  senderId    String
+  recipient   User     @relation("ReceivedNotifications", fields: [recipientId], references: [id], onDelete: Cascade)
+  sender      User     @relation("SentNotifications", fields: [senderId], references: [id], onDelete: Cascade)
+}
+
+// -------------------------------------------------------
+// Conversations & Messages
+// -------------------------------------------------------
+
+model Conversation {
+  id           String                    @id @default(cuid())
+  createdAt    DateTime                  @default(now())
+  participants ConversationParticipant[]
+  messages     Message[]
+}
+
+model ConversationParticipant {
+  id             String       @id @default(cuid())
+  conversationId String
+  userId         String
+  isMuted        Boolean      @default(false)
+  hasHidden      Boolean      @default(false)
+  lastReadAt     DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+}
+
+model Message {
+  id                 String       @id @default(cuid())
+  content            String
+  type               MessageType  @default(USER)
+  createdAt          DateTime     @default(now())
+  senderId           String
+  conversationId     String
+  imageUrl           String?
+  audioUrl           String?
+  documentUrl        String?
+  documentName       String?
+  deletedFor         String[]     // Array of user IDs who have deleted this message for themselves
+  deletedForEveryone Boolean      @default(false)
+
+  sender         User         @relation("SentMessages", fields: [senderId], references: [id])
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+}
+

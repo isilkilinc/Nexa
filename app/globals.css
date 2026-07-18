@@ -200,6 +200,11 @@ body {
   position: relative;
 }
 
+/* Remove padding when full screen 100dvh pages like chat detail are active */
+.page-container:has(.chat-detail-container) {
+  padding-bottom: 0 !important;
+}
+
 /* ─── Shimmer loading effect ─── */
 .shimmer {
   background: linear-gradient(

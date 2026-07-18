@@ -287,10 +287,16 @@ export default function SettingsPage() {
             <GlassCard className="overflow-hidden">
               {section.items.map((item, i) => (
                 <div key={item.label}>
-                  <button
+                  <div
                     id={`settings-${item.label.toLowerCase().replace(/\s/g, '-').replace(/[^a-z0-9-]/g, '')}`}
-                    onClick={item.action}
-                    className="w-full flex items-center gap-3 px-4 py-4 glass-hover"
+                    onClick={(e) => {
+                      if ('toggle' in item) {
+                        item.onToggle?.();
+                      } else {
+                        item.action?.();
+                      }
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-4 glass-hover cursor-pointer"
                   >
                     <item.icon size={16} style={{ color: (item as { danger?: boolean }).danger ? '#ef4444' : 'var(--neon-color)' }} />
                     <p
@@ -316,7 +322,7 @@ export default function SettingsPage() {
                     ) : (
                       <ChevronLeft size={14} className="rotate-180" style={{ color: 'var(--text-muted)' }} />
                     )}
-                  </button>
+                  </div>
                   {i < section.items.length - 1 && (
                     <div className="mx-4 h-px" style={{ background: 'var(--glass-border)' }} />
                   )}

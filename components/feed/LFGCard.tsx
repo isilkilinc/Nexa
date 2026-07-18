@@ -1,13 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, MessageCircle, UserPlus, Monitor, Clock, CheckCircle } from 'lucide-react';
 import { LFGPost } from '@/lib/mockData';
 import { GlassCard } from '../ui/GlassCard';
 import { NeonButton } from '../ui/NeonButton';
 import { useLanguage } from '@/app/providers/LanguageProvider';
-import { useSocial } from '@/app/providers/SocialProvider';
+import { createRequest } from '@/app/actions/requests';
+import { useSession } from 'next-auth/react';
+import { ManageRequests } from './ManageRequests';
 
 interface LFGCardProps {
   post: LFGPost;
@@ -29,14 +31,49 @@ function Avatar({ username }: { username: string }) {
 
 export function LFGCard({ post, index = 0 }: LFGCardProps) {
   const { t } = useLanguage();
-  const { getRequestStatus, sendJoinRequest } = useSocial();
+  const { data: session } = useSession();
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(post.likes);
 
-  const requestStatus = getRequestStatus(post.id);
+  // Seed from server-fetched status so the button reflects DB state on first render
+  const toLocalStatus = (s: LFGPost['initialRequestStatus']): 'none' | 'loading' | 'requested' | 'accepted' => {
+    if (s === 'PENDING') return 'requested';
+    if (s === 'ACCEPTED') return 'accepted';
+    return 'none'; // 'none' or 'REJECTED' → allow re-apply
+  };
+  const [requestStatus, setRequestStatus] = useState<'none' | 'loading' | 'requested' | 'accepted'>(
+    () => toLocalStatus(post.initialRequestStatus)
+  );
+  
+  const [isApplying, setIsApplying] = useState(false);
+  const [initialMessage, setInitialMessage] = useState('');
+
+  const currentUserId = (session?.user as any)?.id;
+  const isOwnListing = post.creatorId === currentUserId;
+
   const handleLike = () => {
     setLiked(!liked);
     setLikeCount(prev => liked ? prev - 1 : prev + 1);
+  };
+
+  const handleApplyClick = () => {
+    if (isOwnListing || requestStatus !== 'none') return;
+    setIsApplying(true);
+  };
+
+  const submitApplication = async () => {
+    if (isOwnListing || requestStatus !== 'none') return;
+    
+    setIsApplying(false);
+    setRequestStatus('loading');
+    const result = await createRequest(post.id, initialMessage);
+    
+    if (result.success) {
+      setRequestStatus('requested');
+    } else {
+      setRequestStatus('none');
+      alert(result.error);
+    }
   };
 
   return (
@@ -202,25 +239,75 @@ export function LFGCard({ post, index = 0 }: LFGCardProps) {
                   <span className="font-rajdhani">{post.comments}</span>
                 </button>
               </div>
-              <NeonButton
-                id={`join-btn-${post.id}`}
-                size="sm"
-                onClick={() => sendJoinRequest(post)}
-                disabled={requestStatus !== 'none'}
-                variant={requestStatus !== 'none' ? 'outline' : 'primary'}
-                className={`font-orbitron tracking-widest transition-all duration-300 ${requestStatus !== 'none' ? 'opacity-80' : ''}`}
-              >
-                {requestStatus === 'accepted' ? (
-                  <span className="flex items-center gap-1.5"><CheckCircle size={14} /> {t('card_accepted')}</span>
-                ) : requestStatus === 'requested' ? (
-                  <span className="flex items-center gap-1.5"><Clock size={14} /> {t('card_requested')}</span>
-                ) : (
-                  t('card_join')
-                )}
-              </NeonButton>
+              {!isOwnListing ? (
+                <NeonButton
+                  id={`join-btn-${post.id}`}
+                  size="sm"
+                  onClick={handleApplyClick}
+                  disabled={requestStatus !== 'none'}
+                  variant={requestStatus !== 'none' ? 'outline' : 'primary'}
+                  className={`font-orbitron tracking-widest transition-all duration-300 ${requestStatus !== 'none' ? 'opacity-80' : ''}`}
+                >
+                  {requestStatus === 'loading' ? (
+                    <span className="flex items-center gap-1.5">Processing...</span>
+                  ) : requestStatus === 'accepted' ? (
+                    <span className="flex items-center gap-1.5"><CheckCircle size={14} /> Accepted</span>
+                  ) : requestStatus === 'requested' ? (
+                    <span className="flex items-center gap-1.5"><Clock size={14} /> Pending</span>
+                  ) : (
+                    'Apply'
+                  )}
+                </NeonButton>
+              ) : (
+                <span className="text-xs font-rajdhani" style={{ color: 'var(--text-muted)' }}>Your Listing</span>
+              )}
             </div>
+
+            {/* Inline Application Message */}
+            <AnimatePresence>
+              {isApplying && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                  animate={{ opacity: 1, height: 'auto', marginTop: 16 }}
+                  exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="p-3 rounded-xl border border-[rgba(var(--neon-color-rgb),0.3)] bg-[rgba(var(--bg-primary-rgb),0.5)]">
+                    <p className="text-xs text-[var(--text-secondary)] mb-2 font-rajdhani">
+                      Add an optional message to introduce yourself:
+                    </p>
+                    <textarea
+                      value={initialMessage}
+                      onChange={(e) => setInitialMessage(e.target.value)}
+                      placeholder="Hey, I'd love to join!"
+                      className="w-full bg-black/40 text-sm rounded-lg p-2.5 outline-none text-white border border-[var(--glass-border)] focus:border-[var(--neon-color)] transition-colors resize-none"
+                      rows={2}
+                    />
+                    <div className="flex justify-end gap-2 mt-3">
+                      <button
+                        onClick={() => setIsApplying(false)}
+                        className="text-xs px-3 py-1.5 rounded-lg text-gray-400 hover:text-white transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <NeonButton
+                        size="sm"
+                        onClick={submitApplication}
+                        className="text-xs py-1.5 px-4 font-rajdhani"
+                      >
+                        Send Request
+                      </NeonButton>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
           </div>
         </div>
+
+        {/* ── Manage Requests (owner only) ── */}
+        {isOwnListing && <ManageRequests listingId={post.id} />}
       </GlassCard>
     </motion.div>
   );

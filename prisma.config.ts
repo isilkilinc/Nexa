@@ -9,4 +9,7 @@ export default defineConfig({
     // commands like `db push` and `migrate`. Do NOT use the pooled URL here.
     url: process.env.DIRECT_URL as string,
   },
+  migrations: {
+    seed: 'dotenv -e .env -- npx tsx prisma/seed.ts',
+  },
 });

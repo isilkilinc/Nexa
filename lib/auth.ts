@@ -27,7 +27,9 @@ export const authOptions: NextAuthOptions = {
       },
 
       async authorize(credentials) {
+        console.log("AUTH DEBUG: Starting authorize for email:", credentials?.email);
         if (!credentials?.email || !credentials?.password) {
+          console.error("AUTH ERROR: Missing email or password");
           throw new Error('Email and password are required.');
         }
 
@@ -35,32 +37,59 @@ export const authOptions: NextAuthOptions = {
           where: { email: credentials.email },
         });
 
-        if (!user || !user.password) {
+        if (!user) {
+          console.error("AUTH ERROR: User not found for email:", credentials.email);
           throw new Error('No account found. Please register first.');
         }
 
+        if (!user.password) {
+          console.error("AUTH ERROR: User found, but password hash is null (OAuth user?)");
+          throw new Error('Account exists but has no password (try signing in with Google/Discord).');
+        }
+        
+        console.log("AUTH DEBUG: User found in DB. ID:", user.id);
+
         const isValid = await bcryptjs.compare(credentials.password, user.password);
+        console.log("AUTH DEBUG: Password match result:", isValid);
+        
         if (!isValid) {
+          console.error("AUTH ERROR: Invalid password for email:", credentials.email);
           throw new Error('Incorrect password. Please try again.');
         }
 
-        if (!user.emailVerified) {
-          throw new Error(
-            'Email not verified. Please check your inbox and click the verification link.'
-          );
-        }
-
-        return { id: user.id, name: user.name, email: user.email };
+        const returnedUser = { id: user.id, name: user.name, email: user.email };
+        console.log("AUTH DEBUG: Returning user object:", returnedUser);
+        return returnedUser;
       },
     }),
   ],
 
-  // Must use 'database' strategy when PrismaAdapter is active.
-  // Using 'jwt' with an adapter breaks OAuth providers (Google, Discord)
-  // because NextAuth can't persist the session, causing a silent redirect loop.
-  session: { strategy: 'database' },
+  // Using 'jwt' strategy so CredentialsProvider sessions persist correctly.
+  session: { strategy: 'jwt' },
+
+  useSecureCookies: process.env.NODE_ENV === 'production',
+
+  cookies: {
+    sessionToken: {
+      name: process.env.NODE_ENV === 'production' ? '__Secure-next-auth.session-token' : 'next-auth.session-token',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+        // Removed domain setting for localhost to prevent cookie mismatches
+      },
+    },
+  },
 
   callbacks: {
+    async redirect({ url, baseUrl }) {
+      // Ensure the Auth callback strictly uses http://localhost:3001 in development
+      const targetBase = process.env.NODE_ENV === 'development' ? 'http://localhost:3001' : baseUrl;
+      if (url.startsWith('/')) return `${targetBase}${url}`;
+      if (new URL(url).origin === targetBase) return url;
+      return targetBase;
+    },
     async signIn({ account }) {
       // Allow all OAuth sign-ins (Google, Discord, etc.)
       if (account?.type === 'oauth') {
@@ -69,9 +98,15 @@ export const authOptions: NextAuthOptions = {
       // For credentials, the authorize() function handles validation
       return true;
     },
-    async session({ session, user }) {
-      if (user && session.user) {
-        (session.user as any).id = user.id;
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (token && session.user) {
+        (session.user as any).id = token.id;
       }
       return session;
     },

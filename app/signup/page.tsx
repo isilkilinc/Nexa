@@ -8,8 +8,9 @@ import { signIn } from 'next-auth/react';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { NeonButton } from '@/components/ui/NeonButton';
 import { NexaLogo } from '@/components/ui/NexaLogo';
+import { register } from '@/app/actions/register';
 
-type UIState = 'idle' | 'loading' | 'email_sent' | 'error';
+type UIState = 'idle' | 'loading' | 'error';
 
 export default function AuthPage() {
   const router = useRouter();
@@ -19,25 +20,43 @@ export default function AuthPage() {
   const [password, setPassword] = useState('');
   const [uiState, setUiState] = useState<UIState>('idle');
   const [errorMsg, setErrorMsg] = useState('');
+  const [comingSoonProvider, setComingSoonProvider] = useState<string | null>(null);
+
+  const handleComingSoon = (e: React.MouseEvent, provider: string) => {
+    e.preventDefault();
+    setComingSoonProvider(provider);
+    setTimeout(() => setComingSoonProvider(null), 2500);
+  };
 
   // ── Registration ──────────────────────────────────────────────────────
   const handleRegister = async () => {
     setUiState('loading');
     setErrorMsg('');
 
-    const res = await fetch('/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: username, email, password }),
-    });
+    const formData = new FormData();
+    formData.append('name', username);
+    formData.append('email', email);
+    formData.append('password', password);
 
-    const data = await res.json();
+    const result = await register(formData);
 
-    if (!res.ok) {
+    if (result?.error) {
       setUiState('error');
-      setErrorMsg(data.error ?? 'Something went wrong. Please try again.');
+      setErrorMsg(result.error);
     } else {
-      setUiState('email_sent');
+      // Auto-login upon successful registration
+      const loginResult = await signIn('credentials', {
+        redirect: false,
+        email,
+        password,
+      });
+
+      if (loginResult?.error) {
+        setUiState('error');
+        setErrorMsg('Registration successful, but login failed. Please try logging in manually.');
+      } else {
+        router.push('/');
+      }
     }
   };
 
@@ -57,7 +76,7 @@ export default function AuthPage() {
       // NextAuth wraps authorize errors as "CredentialsSignin" — show a friendlier message
       setErrorMsg(
         result.error === 'CredentialsSignin'
-          ? 'Login failed. Check your credentials or verify your email first.'
+          ? 'Login failed. Check your credentials.'
           : result.error
       );
     } else {
@@ -74,64 +93,9 @@ export default function AuthPage() {
     }
   };
 
-  const handlePlaceholderLogin = (e: React.MouseEvent, provider: string) => {
-    e.preventDefault();
-    alert(`${provider} integration coming soon! / Yakında eklenecek!`);
-  };
 
-  // ── Email sent confirmation state ─────────────────────────────────────
-  if (uiState === 'email_sent') {
-    return (
-      <div className="min-h-screen flex items-center justify-center space-bg p-4 relative overflow-hidden">
-        <div className="absolute inset-0 grid-bg opacity-20 pointer-events-none" />
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="relative z-10 w-full max-w-md"
-        >
-          <GlassCard className="p-10 flex flex-col items-center text-center">
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
-              className="mb-6"
-            >
-              <CheckCircle size={64} style={{ color: '#22c55e' }} />
-            </motion.div>
-            <NexaLogo size="sm" className="mb-4" />
-            <h2
-              className="font-orbitron font-bold text-2xl mb-3"
-              style={{ color: 'var(--text-primary)' }}
-            >
-              Check Your Inbox
-            </h2>
-            <p
-              className="font-rajdhani text-base leading-relaxed mb-6"
-              style={{ color: 'var(--text-secondary)' }}
-            >
-              We've sent a verification link to{' '}
-              <strong style={{ color: 'var(--neon-color)' }}>{email}</strong>.
-              Click the link in that email to activate your account.
-            </p>
-            <p className="text-xs font-rajdhani" style={{ color: 'var(--text-muted)' }}>
-              The link expires in 24 hours. Check your spam folder if you don't see it.
-            </p>
-            <button
-              onClick={() => {
-                setUiState('idle');
-                setIsLogin(true);
-              }}
-              className="mt-8 text-sm font-rajdhani font-bold hover:underline"
-              style={{ color: 'var(--neon-color)' }}
-            >
-              Already verified? Log in →
-            </button>
-          </GlassCard>
-        </motion.div>
-      </div>
-    );
-  }
+
+
 
   return (
     <div className="min-h-screen flex items-center justify-center space-bg p-4 relative overflow-hidden">
@@ -170,6 +134,23 @@ export default function AuthPage() {
                 <AlertCircle size={16} className="mt-0.5 shrink-0" style={{ color: '#ef4444' }} />
                 <p className="text-sm font-rajdhani" style={{ color: '#fca5a5' }}>
                   {errorMsg}
+                </p>
+              </motion.div>
+            )}
+            {comingSoonProvider && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="w-full mb-4 flex items-start gap-3 rounded-xl px-4 py-3"
+                style={{
+                  background: 'rgba(59,130,246,0.1)',
+                  border: '1px solid rgba(59,130,246,0.3)',
+                }}
+              >
+                <AlertCircle size={16} className="mt-0.5 shrink-0" style={{ color: '#3b82f6' }} />
+                <p className="text-sm font-rajdhani" style={{ color: '#93c5fd' }}>
+                  {comingSoonProvider} Login coming soon!
                 </p>
               </motion.div>
             )}
@@ -277,7 +258,7 @@ export default function AuthPage() {
           <div className="w-full flex justify-center gap-4">
             <button
               title="Steam"
-              onClick={(e) => handlePlaceholderLogin(e, 'Steam')}
+              onClick={(e) => handleComingSoon(e, 'Steam')}
               className="w-12 h-12 flex items-center justify-center rounded-full transition-all hover:scale-110"
               style={{ background: 'rgba(102,192,244,0.1)', color: 'var(--text-primary)', border: '1px solid rgba(102,192,244,0.3)', boxShadow: '0 4px 12px rgba(102,192,244,0.2)' }}
             >
@@ -286,7 +267,7 @@ export default function AuthPage() {
 
             <button
               title="Discord"
-              onClick={(e) => handlePlaceholderLogin(e, 'Discord')}
+              onClick={(e) => handleComingSoon(e, 'Discord')}
               className="w-12 h-12 flex items-center justify-center rounded-full transition-all hover:scale-110"
               style={{ background: 'rgba(88,101,242,0.1)', color: '#5865F2', border: '1px solid rgba(88,101,242,0.3)', boxShadow: '0 4px 12px rgba(88,101,242,0.2)' }}
             >
@@ -295,7 +276,7 @@ export default function AuthPage() {
 
             <button
               title="Epic Games"
-              onClick={(e) => handlePlaceholderLogin(e, 'Epic Games')}
+              onClick={(e) => handleComingSoon(e, 'Epic Games')}
               className="w-12 h-12 flex items-center justify-center rounded-full transition-all hover:scale-110"
               style={{ background: 'rgba(204,204,204,0.1)', color: 'var(--text-primary)', border: '1px solid rgba(204,204,204,0.3)', boxShadow: '0 4px 12px rgba(204,204,204,0.2)' }}
             >
@@ -304,7 +285,7 @@ export default function AuthPage() {
 
             <button
               title="Google"
-              onClick={() => signIn('google')}
+              onClick={(e) => handleComingSoon(e, 'Google')}
               className="w-12 h-12 flex items-center justify-center rounded-full transition-all hover:scale-110"
               style={{ background: 'rgba(234,67,53,0.1)', color: '#EA4335', border: '1px solid rgba(234,67,53,0.3)', boxShadow: '0 4px 12px rgba(234,67,53,0.2)' }}
             >

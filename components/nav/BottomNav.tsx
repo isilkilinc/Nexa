@@ -1,19 +1,41 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Home, Users, MessageCircle, User, Plus } from 'lucide-react';
 import { AddPostModal } from './AddPostModal';
 import { useLanguage } from '@/app/providers/LanguageProvider';
+import { getUnreadCount } from '@/app/actions/messages';
 
 export function BottomNav() {
   const pathname = usePathname();
   const router = useRouter();
   const { t } = useLanguage();
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
-  if (pathname === '/signup') return null;
+  useEffect(() => {
+    const fetchUnread = async () => {
+      try {
+        const res = await getUnreadCount();
+        if (res.count !== undefined) setUnreadCount(res.count);
+      } catch (e) {
+        // Ignore
+      }
+    };
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Hide on signup page AND dynamic chat routes (but show on main /messages list)
+  if (
+    pathname === '/signup' || 
+    (pathname.startsWith('/messages/') && pathname !== '/messages')
+  ) {
+    return null;
+  }
 
   const NAV_ITEMS = [
     { id: 'home',     label: t('nav_home'),     icon: Home,          path: '/'         },
@@ -125,7 +147,7 @@ export function BottomNav() {
                 </span>
 
                 {/* Unread dot for messages */}
-                {item.id === 'messages' && (
+                {item.id === 'messages' && unreadCount > 0 && (
                   <span
                     className="absolute top-2 right-4 w-2 h-2 rounded-full bg-red-500"
                     style={{ boxShadow: '0 0 6px rgba(239,68,68,0.8)' }}

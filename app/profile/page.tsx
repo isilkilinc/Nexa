@@ -256,8 +256,8 @@ function EditProfileModal({ data, onSave, onClose }: EditProfileModalProps) {
                     </div>
                   </div>
 
-                  {/* Action buttons - Sticky at bottom */}
-                  <div className="sticky bottom-0 left-0 right-0 pt-4 pb-2 mt-4 flex gap-3" style={{ background: 'var(--bg-primary)', borderTop: '1px solid var(--glass-border)', boxShadow: '0 -10px 20px var(--bg-primary)' }}>
+                  {/* Action buttons */}
+                  <div className="pt-4 mt-4 flex gap-3" style={{ borderTop: '1px solid var(--glass-border)' }}>
                     <button
                       id="cancel-edit-profile"
                       onClick={onClose}

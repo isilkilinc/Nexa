@@ -12,6 +12,8 @@ export interface User {
 
 export interface LFGPost {
   id: string;
+  creatorId: string;
+  initialRequestStatus: 'none' | 'PENDING' | 'ACCEPTED' | 'REJECTED';
   user: User;
   game: string;
   gameColor: string;
@@ -28,6 +30,7 @@ export interface LFGPost {
   comments: number;
   behaviorScore: number;
 }
+
 
 export interface Group {
   id: string;
@@ -112,6 +115,8 @@ export const MY_PROFILE: User & {
 export const MOCK_LFG_POSTS: LFGPost[] = [
   {
     id: 'p1',
+    creatorId: 'u1',
+    initialRequestStatus: 'none',
     user: MOCK_USERS[1],
     game: 'Valorant',
     gameColor: '#ff4655',
@@ -130,6 +135,8 @@ export const MOCK_LFG_POSTS: LFGPost[] = [
   },
   {
     id: 'p2',
+    creatorId: 'u2',
+    initialRequestStatus: 'none',
     user: MOCK_USERS[2],
     game: 'The Witcher 3',
     gameColor: '#c8973a',
@@ -148,6 +155,8 @@ export const MOCK_LFG_POSTS: LFGPost[] = [
   },
   {
     id: 'p3',
+    creatorId: 'u4',
+    initialRequestStatus: 'none',
     user: MOCK_USERS[4],
     game: 'Detroit: Become Human',
     gameColor: '#3b82f6',
@@ -166,6 +175,8 @@ export const MOCK_LFG_POSTS: LFGPost[] = [
   },
   {
     id: 'p4',
+    creatorId: 'u5',
+    initialRequestStatus: 'none',
     user: MOCK_USERS[5],
     game: 'Red Dead Redemption 2',
     gameColor: '#b45309',
@@ -184,6 +195,8 @@ export const MOCK_LFG_POSTS: LFGPost[] = [
   },
   {
     id: 'p5',
+    creatorId: 'u3',
+    initialRequestStatus: 'none',
     user: MOCK_USERS[3],
     game: 'Cyberpunk 2077',
     gameColor: '#f9e000',

@@ -194,7 +194,7 @@ export function AIDuoRecommendations() {
                     className="text-[10px] leading-snug font-rajdhani italic"
                     style={{ color: 'var(--text-secondary)' }}
                   >
-                    "{rec.reason}"
+                    &quot;{rec.reason}&quot;
                   </p>
 
                   {/* Tags */}
