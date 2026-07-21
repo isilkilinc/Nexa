@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useTransition } from 'react';
 import { motion } from 'framer-motion';
-import { Send, Loader2, Image as ImageIcon, Mic, X, Trash2, StopCircle, FileText, Download } from 'lucide-react';
+import { Send, Loader2, Image as ImageIcon, Mic, X, Trash2, StopCircle, FileText, Download, Heart, Reply } from 'lucide-react';
 import { sendMessage, getMessages, deleteMessage } from '@/app/actions/messages';
 import { uploadFile } from '@/app/actions/upload';
 import Image from 'next/image';
@@ -131,7 +131,8 @@ export default function ChatClient({ conversationId, initialMessages, currentUse
       senderId: currentUserId,
       isMe: true,
       sender: { name: 'You' },
-      imageUrl: imageFile ? URL.createObjectURL(imageFile) : null,
+      imageUrl: null,
+      fileUrl: imageFile ? URL.createObjectURL(imageFile) : null,
       audioUrl: audioBlob ? URL.createObjectURL(audioBlob) : null,
       documentUrl: null, // Will be replaced by server
       documentName: documentFile ? documentFile.name : null,
@@ -177,7 +178,7 @@ export default function ChatClient({ conversationId, initialMessages, currentUse
         if (res.url) uploadedAudioUrl = res.url;
       }
 
-      const res = await sendMessage(conversationId, sentContent, uploadedImageUrl, uploadedAudioUrl, uploadedDocUrl, uploadedDocName);
+      const res = await sendMessage(conversationId, sentContent, undefined, uploadedAudioUrl, uploadedDocUrl, uploadedDocName, uploadedImageUrl);
       if (res.data) {
         setMessages((prev: any) =>
           prev.map((m: any) => (m.id === optimistic.id ? res.data : m))
@@ -190,7 +191,7 @@ export default function ChatClient({ conversationId, initialMessages, currentUse
     if (type === 'me') {
       setMessages((prev: any) => prev.filter((m: any) => m.id !== msgId));
     } else {
-      setMessages((prev: any) => prev.map((m: any) => m.id === msgId ? { ...m, content: 'This message was deleted', imageUrl: null, audioUrl: null, documentUrl: null, documentName: null, deletedForEveryone: true } : m));
+      setMessages((prev: any) => prev.map((m: any) => m.id === msgId ? { ...m, content: 'This message was deleted', imageUrl: null, fileUrl: null, audioUrl: null, documentUrl: null, documentName: null, deletedForEveryone: true } : m));
     }
     await deleteMessage(msgId, type);
   };
@@ -247,23 +248,28 @@ export default function ChatClient({ conversationId, initialMessages, currentUse
               onMouseEnter={() => setHoveredMessageId(m.id)}
               onMouseLeave={() => setHoveredMessageId(null)}
             >
-              {/* Delete Menu */}
+              {/* Message Actions Menu */}
               {hoveredMessageId === m.id && !isDeleted && !m.id.toString().startsWith('optimistic-') && (
-                <div className={`absolute top-0 flex gap-1 ${isMe ? 'right-full mr-2' : 'left-full ml-2'} z-10`}>
+                <div className={`absolute top-1/2 -translate-y-1/2 flex gap-1 ${isMe ? 'right-full mr-2' : 'left-full ml-2'} z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200`}>
                   <button 
-                    onClick={() => handleDelete(m.id, 'me')}
-                    className="p-1.5 rounded-lg bg-black/40 hover:bg-black/80 backdrop-blur-sm border border-white/10 text-white/70 hover:text-white transition-all text-xs flex items-center gap-1 whitespace-nowrap"
-                    title="Delete for me"
+                    className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/10 text-white/70 hover:text-white transition-all text-xs flex items-center justify-center"
+                    title="React ❤️"
                   >
-                    <Trash2 size={12} /> Me
+                    <Heart size={14} />
+                  </button>
+                  <button 
+                    className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/10 text-white/70 hover:text-white transition-all text-xs flex items-center justify-center"
+                    title="Reply"
+                  >
+                    <Reply size={14} />
                   </button>
                   {isMe && (
                     <button 
                       onClick={() => handleDelete(m.id, 'everyone')}
-                      className="p-1.5 rounded-lg bg-black/40 hover:bg-red-500/80 backdrop-blur-sm border border-white/10 text-white/70 hover:text-white transition-all text-xs flex items-center gap-1 whitespace-nowrap"
-                      title="Delete for everyone"
+                      className="p-1.5 rounded-full bg-white/10 hover:bg-red-500/80 backdrop-blur-sm border border-white/10 text-white/70 hover:text-white transition-all text-xs flex items-center justify-center"
+                      title="Delete"
                     >
-                      <Trash2 size={12} /> All
+                      <Trash2 size={14} />
                     </button>
                   )}
                 </div>
@@ -281,9 +287,9 @@ export default function ChatClient({ conversationId, initialMessages, currentUse
                   opacity: isDeleted ? 0.6 : 1,
                 }}
               >
-                {m.imageUrl && !isDeleted && (
-                  <div className="mb-2 relative rounded-lg overflow-hidden" style={{ minWidth: '200px', minHeight: '150px' }}>
-                    <img src={m.imageUrl} alt="Uploaded content" className="w-full h-auto object-cover max-h-[300px]" />
+                {(m.fileUrl || m.imageUrl) && !isDeleted && (
+                  <div className="mb-2 relative rounded-xl overflow-hidden" style={{ width: '250px', height: '250px' }}>
+                    <Image src={m.fileUrl || m.imageUrl} alt="Uploaded content" fill className="object-cover" unoptimized priority />
                   </div>
                 )}
                 

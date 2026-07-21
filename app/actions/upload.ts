@@ -2,9 +2,13 @@
 
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
+import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
+
+// Initialize Supabase client
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 export async function uploadFile(formData: FormData): Promise<{
   url?: string;
@@ -26,25 +30,30 @@ export async function uploadFile(formData: FormData): Promise<{
       return { error: 'File size exceeds 5MB limit' };
     }
 
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-
-    // Create unique filename
-    const ext = file.name.split('.').pop() || '';
-    const filename = `${randomUUID()}.${ext}`;
-    
-    // Ensure the uploads directory exists
-    const uploadsDir = join(process.cwd(), 'public', 'uploads');
-    try {
-      await mkdir(uploadsDir, { recursive: true });
-    } catch (err) {
-      // Ignore if directory already exists
+    if (!supabaseUrl || !supabaseKey) {
+      return { error: 'Supabase credentials are not configured' };
     }
 
-    const filepath = join(uploadsDir, filename);
-    await writeFile(filepath, buffer);
+    const ext = file.name.split('.').pop() || '';
+    const filename = `${randomUUID()}.${ext}`;
 
-    return { url: `/uploads/${filename}` };
+    const { data, error } = await supabase.storage
+      .from('chat-media')
+      .upload(filename, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (error) {
+      console.error('SUPABASE_UPLOAD_ERROR:', error);
+      return { error: 'Failed to upload to storage' };
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from('chat-media')
+      .getPublicUrl(filename);
+
+    return { url: publicUrlData.publicUrl };
   } catch (error) {
     console.error('UPLOAD_FILE_ERROR:', error);
     return { error: 'Failed to upload file' };

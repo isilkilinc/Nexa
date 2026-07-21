@@ -52,6 +52,8 @@ export default async function ChatPage({ params }: { params: { id: string } }) {
         otherName={otherName}
         otherInitial={otherInitial}
         initialIsMuted={participant.isMuted}
+        otherId={other?.id || ''}
+        otherImage={other?.image || null}
       />
 
       <ChatClient 

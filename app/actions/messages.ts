@@ -30,6 +30,7 @@ export type MessageItem = {
   type: string;
   senderId: string;
   imageUrl?: string | null;
+  fileUrl?: string | null;
   audioUrl?: string | null;
   documentUrl?: string | null;
   documentName?: string | null;
@@ -54,8 +55,23 @@ export async function getConversations(): Promise<{
     }
     const userId = (session.user as any).id as string;
 
+    const blockedUserIds = (await prisma.block.findMany({
+      where: { OR: [{ blockerId: userId }, { blockedId: userId }] }
+    })).map(b => b.blockerId === userId ? b.blockedId : b.blockerId);
+
     const participantRows = await prisma.conversationParticipant.findMany({
-      where: { userId, hasHidden: false },
+      where: { 
+        userId, 
+        hasHidden: false,
+        conversation: {
+          NOT: { deletedBy: { has: userId } },
+          participants: {
+            none: {
+              userId: { in: blockedUserIds }
+            }
+          }
+        }
+      },
       include: {
         conversation: {
           include: {
@@ -116,8 +132,27 @@ export async function getMessages(conversationId: string): Promise<{
     // Auth: user must be a participant
     const participant = await prisma.conversationParticipant.findUnique({
       where: { conversationId_userId: { conversationId, userId } },
+      include: {
+        conversation: {
+          include: { participants: true }
+        }
+      }
     });
     if (!participant) return { error: 'Forbidden' };
+
+    // Check block
+    const otherParticipant = participant.conversation.participants.find(p => p.userId !== userId);
+    if (otherParticipant) {
+      const isBlocked = await prisma.block.findFirst({
+        where: {
+          OR: [
+            { blockerId: userId, blockedId: otherParticipant.userId },
+            { blockerId: otherParticipant.userId, blockedId: userId }
+          ]
+        }
+      });
+      if (isBlocked) return { error: 'Forbidden' };
+    }
 
     const messages = await prisma.message.findMany({
       where: { conversationId },
@@ -128,7 +163,7 @@ export async function getMessages(conversationId: string): Promise<{
     });
 
     const filteredMessages = messages
-      .filter((m) => !m.deletedFor.includes(userId))
+      .filter((m) => !(m.deletedFor || []).includes(userId))
       .map((m) => {
         const isDeleted = m.deletedForEveryone;
         return {
@@ -139,6 +174,7 @@ export async function getMessages(conversationId: string): Promise<{
           type: m.type,
           senderId: m.senderId,
           imageUrl: isDeleted ? null : m.imageUrl,
+          fileUrl: isDeleted ? null : m.fileUrl,
           audioUrl: isDeleted ? null : m.audioUrl,
           documentUrl: isDeleted ? null : m.documentUrl,
           documentName: isDeleted ? null : m.documentName,
@@ -162,7 +198,8 @@ export async function sendMessage(
   imageUrl?: string,
   audioUrl?: string,
   documentUrl?: string,
-  documentName?: string
+  documentName?: string,
+  fileUrl?: string
 ): Promise<{ data?: MessageItem; error?: string }> {
   try {
     const session = await getServerSession(authOptions);
@@ -185,6 +222,7 @@ export async function sendMessage(
         senderId: userId, 
         content: content.trim(),
         imageUrl,
+        fileUrl,
         audioUrl,
         documentUrl,
         documentName,
@@ -208,6 +246,7 @@ export async function sendMessage(
         type: message.type,
         senderId: message.senderId,
         imageUrl: message.imageUrl,
+        fileUrl: message.fileUrl,
         audioUrl: message.audioUrl,
         documentUrl: message.documentUrl,
         documentName: message.documentName,
@@ -249,10 +288,13 @@ export async function deleteMessage(
         data: { deletedForEveryone: true },
       });
     } else {
-      await prisma.message.update({
-        where: { id: messageId },
-        data: { deletedFor: { push: userId } },
-      });
+      const currentDeletedFor = message.deletedFor || [];
+      if (!currentDeletedFor.includes(userId)) {
+        await prisma.message.update({
+          where: { id: messageId },
+          data: { deletedFor: [...currentDeletedFor, userId] },
+        });
+      }
     }
 
     revalidatePath('/messages');
@@ -365,6 +407,23 @@ export async function deleteConversation(
       where: { conversationId_userId: { conversationId, userId } },
       data: { hasHidden: true },
     });
+
+    const conv = await prisma.conversation.findUnique({
+      where: { id: conversationId },
+      select: { deletedBy: true }
+    });
+
+    if (!conv) {
+      return { error: 'Conversation not found' };
+    }
+
+    const currentDeletedBy = conv.deletedBy || [];
+    if (!currentDeletedBy.includes(userId)) {
+      await prisma.conversation.update({
+        where: { id: conversationId },
+        data: { deletedBy: [...currentDeletedBy, userId] },
+      });
+    }
 
     revalidatePath('/messages');
     return { success: true };
