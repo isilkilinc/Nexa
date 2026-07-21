@@ -231,7 +231,7 @@ export default function ChatHeader({
                 <>
                   <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mb-4 text-red-500"><UserX size={24} /></div>
                   <h3 className="text-xl font-semibold mb-2 text-[var(--text-primary)]">Block {otherName}?</h3>
-                  <p className="text-sm text-[var(--text-secondary)] mb-6">They won't be able to message you, and this chat will be hidden.</p>
+                  <p className="text-sm text-[var(--text-secondary)] mb-6">They won&apos;t be able to message you, and this chat will be hidden.</p>
                   <div className="flex gap-3 w-full">
                     <button onClick={() => setModalState('none')} className="flex-1 py-3 rounded-xl bg-[var(--glass-bg)] hover:bg-[var(--glass-bg-hover)] transition-colors font-semibold text-sm text-[var(--text-primary)]">Cancel</button>
                     <button onClick={handleBlockUser} disabled={isLoading} className="flex-1 py-3 rounded-xl bg-red-500 hover:bg-red-600 text-white transition-colors font-semibold text-sm disabled:opacity-50 flex justify-center items-center">
